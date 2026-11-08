@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TripCircle Planner</title>
+<style>
+:root{--bg:#f6f7f4;--card:#fff;--ink:#16211e;--mute:#5d6b66;--line:#dfe5e0;--acc:#0f7b6c;--acc-ink:#fff;--warn:#b45309;--soft:#e8f3f0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1513;--card:#16201d;--ink:#e8f0ed;--mute:#9bb0a8;--line:#27342f;--acc:#3dc2ab;--acc-ink:#04201a;--warn:#f0a94b;--soft:#1b2c27}}
+:root[data-theme="dark"]{--bg:#0e1513;--card:#16201d;--ink:#e8f0ed;--mute:#9bb0a8;--line:#27342f;--acc:#3dc2ab;--acc-ink:#04201a;--warn:#f0a94b;--soft:#1b2c27}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 64px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+h1{font-size:1.5rem;margin:0}
+.sub{color:var(--mute);margin:0 0 18px}
+.badge{font-size:.78rem;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.badge.warn{color:var(--warn);border-color:var(--warn)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+label{display:block;font-weight:600;font-size:.9rem;margin:12px 0 4px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 16px}
+button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.55;cursor:default}
+.q{margin:16px 0}.q p{margin:0 0 8px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{padding:8px 14px;border-radius:99px}
+.opt.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.prog{color:var(--mute);margin:6px 0}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes s{to{transform:rotate(360deg)}}
+.err{color:#b91c1c;background:#fee2e2;border-radius:10px;padding:10px 12px}
+@media (prefers-color-scheme:dark){.err{color:#fecaca;background:#4a1d1d}}
+h2{font-size:1.2rem;margin:0 0 8px}
+h3{font-size:1rem;margin:14px 0 4px}
+.day{border-left:3px solid var(--acc);padding-left:14px;margin:16px 0}
+.item{padding:10px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.item .t{color:var(--mute);font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{font-size:.8rem;padding:2px 9px;border-radius:99px;background:var(--soft);border:1px solid var(--line)}
+.chip.need{border-color:var(--warn);color:var(--warn)}
+.tip{background:var(--soft);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:.93rem}
+a{color:var(--acc)}
+.src a{font-size:.82rem;margin-right:8px}
+table{width:100%;border-collapse:collapse}
+td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.small{font-size:.85rem;color:var(--mute)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>TripCircle Planner</h1>
+  <span id="mode" class="badge">checking...</span>
+</header>
+<p class="sub">Tell us where you are going. The AI asks a few questions, searches the web, and builds a plan with prices, booking timing and local tips.</p>
+
+<section id="s1" class="card">
+  <h2>1. Your trip</h2>
+  <div id="pwbox" class="hide"><label for="pw">Demo password</label><input id="pw" type="password" autocomplete="off"></div>
+  <label for="dest">Where are you going?</label>
+  <input id="dest" placeholder="e.g. Lisbon, Portugal" autocomplete="off">
+  <div class="row">
+    <div><label for="days">Days</label><input id="days" type="number" min="1" max="14" value="3"></div>
+    <div><label for="when">When?</label><input id="when" placeholder="e.g. late May 2027"></div>
+    <div><label for="trav">Travellers</label><input id="trav" type="number" min="1" max="12" value="2"></div>
+  </div>
+  <div class="row">
+    <div><label for="budget">Budget</label>
+      <select id="budget"><option>Budget</option><option selected>Mid-range</option><option>Comfortable</option><option>No limit</option></select></div>
+    <div><label for="cur">Currency</label>
+      <select id="cur"><option>EUR</option><option>USD</option><option>GBP</option><option>BRL</option></select></div>
+  </div>
+  <label for="int">What do you like to do?</label>
+  <textarea id="int" rows="2" placeholder="e.g. food markets, museums, hiking, live music, quiet beaches"></textarea>
+  <p><button class="primary" id="go1">Next: the AI asks you a few questions</button></p>
+  <div id="e1" class="err hide"></div>
+</section>
+
+<section id="s2" class="card hide">
+  <h2>2. A few questions</h2>
+  <p class="small">Answer what matters to you. Skipped questions are left to the AI.</p>
+  <div id="qs"></div>
+  <p><button id="back2">Back</button> <button class="primary" id="go2">Build my plan</button></p>
+  <div id="e2" class="err hide"></div>
+</section>
+
+<section id="s3" class="card hide">
+  <h2>3. Working on it</h2>
+  <div id="prog"></div>
+  <p class="small">This can take a minute or two while the AI searches and compares sources.</p>
+  <div id="e3" class="err hide"></div>
+</section>
+
+<section id="out" class="hide"></section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : "#");
+let MODE = "none", PASS = "", sample = null, profile = null, questions = [], answers = {}, lastPlan = null;
+
+/* ---------- backends ---------- */
+const parseJson = (t) => { const s = t.indexOf("{"), e = t.lastIndexOf("}"); if (s < 0 || e < 0) throw new Error("The AI did not return a plan. Try again."); return JSON.parse(t.slice(s, e + 1)); };
+const ptxt = (p) => `Destination: ${p.destination}\nDays: ${p.days}\nWhen: ${p.when || "flexible"}\nTravellers: ${p.travellers}\nBudget: ${p.budget} (${p.currency})\nInterests: ${p.interests || "n/a"}`;
+
+async function apiQuestions() {
+  if (MODE === "live") {
+    const r = await fetch("/api/questions", { method: "POST", headers: { "content-type": "application/json", "x-demo-password": PASS }, body: JSON.stringify({ profile }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || "Server error"); return j.questions;
+  }
+  const out = await sample(`You help plan trips.\n${ptxt(profile)}\nWrite 5 short multiple-choice questions that would most change the itinerary for this destination (pace, famous sights vs hidden gems, food, nightlife, mobility, day trips, crowds). Each has 3-4 short destination-specific options. Reply ONLY with JSON: {"questions":[{"id":"q1","text":"","options":[""]}]}`, { cache: false });
+  return parseJson(out.text).questions;
+}
+
+async function apiPlan(onProgress) {
+  const ans = questions.filter((q) => answers[q.id]).map((q) => ({ question: q.text, answer: answers[q.id] }));
+  if (MODE === "live") {
+    const r = await fetch("/api/plan", { method: "POST", headers: { "content-type": "application/json", "x-demo-password": PASS }, body: JSON.stringify({ profile, answers: ans }) });
+    if (!r.ok || !r.body) { let m = "Server error"; try { m = (await r.json()).error || m; } catch (e) {} throw new Error(m); }
+    const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i; while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (!line) continue;
+        const m = JSON.parse(line);
+        if (m.type === "progress") onProgress(m.msg);
+        if (m.type === "error") throw new Error(m.msg);
+        if (m.type === "result") return m.plan;
+      }
+    }
+    throw new Error("The server stopped before finishing.");
+  }
+  onProgress("Asking Claude to draft the plan from its own knowledge (no live web in this demo)...");
+  const out = await sample(`Build ONE trip plan as JSON for:\n${ptxt(profile)}\nPreferences:\n${ans.map((a) => `- ${a.question} -> ${a.answer}`).join("\n") || "(none)"}\n\nYou have NO live web access: say so, mark every price as basis "estimate", and never invent URLs (use empty sources arrays). Make exactly ${profile.days} days, currency ${profile.currency}.\nReply ONLY with JSON: {"title":"","summary":"","bestTime":{"recommendation":"","peakMonths":"","cheapMonths":"","note":""},"agreement":"","days":[{"day":1,"theme":"","items":[{"time":"09:00","name":"","description":"","price":{"amount":0,"currency":"${profile.currency}","per":"person","basis":"estimate"},"booking":{"needed":"yes|recommended|no|unknown","leadTime":"","how":""},"tip":"","sources":[]}]}],"localTips":[{"tip":"","sources":[]}],"hiddenGems":[{"name":"","why":"","sources":[]}],"budget":{"currency":"${profile.currency}","perPersonTotal":0,"breakdown":[{"label":"","amount":0}]},"bookingTimeline":[{"when":"","what":""}],"caveats":[""]}`, { cache: false, modelTier: "complex" });
+  const plan = parseJson(out.text); plan.allSources = []; plan.generatedBy = ["Claude (demo, no live web)"]; return plan;
+}
+
+/* ---------- UI flow ---------- */
+const show = (id, on = true) => $(id).classList.toggle("hide", !on);
+const fail = (id, e) => { const el = $(id); el.textContent = e.message || String(e); show(id); };
+
+$("go1").onclick = async () => {
+  show("e1", false);
+  const dest = $("dest").value.trim();
+  if (!dest) return fail("e1", new Error("Please enter a destination."));
+  if (MODE === "none") return fail("e1", new Error("No AI backend found. Start the server (see README) or open the demo link."));
+  PASS = $("pw").value;
+  profile = { destination: dest, days: Math.max(1, Math.min(14, +$("days").value || 3)), when: $("when").value.trim(), travellers: +$("trav").value || 2, budget: $("budget").value, currency: $("cur").value, interests: $("int").value.trim() };
+  $("go1").disabled = true; $("go1").textContent = "Thinking of questions...";
+  try {
+    questions = await apiQuestions(); answers = {};
+    renderQuestions(); show("s1", false); show("s2");
+  } catch (e) { fail("e1", e); }
+  $("go1").disabled = false; $("go1").textContent = "Next: the AI asks you a few questions";
+};
+
+function renderQuestions() {
+  $("qs").innerHTML = questions.map((q, qi) => `<div class="q"><p>${esc(q.text)}</p><div class="opts">` +
+    (q.options || []).map((o, oi) => `<button class="opt" data-q="${qi}" data-o="${oi}">${esc(o)}</button>`).join("") + `</div></div>`).join("");
+  $("qs").querySelectorAll(".opt").forEach((b) => b.onclick = () => {
+    const q = questions[+b.dataset.q], o = q.options[+b.dataset.o];
+    answers[q.id] = answers[q.id] === o ? "" : o;
+    b.parentElement.querySelectorAll(".opt").forEach((x) => x.classList.toggle("on", answers[q.id] === x.textContent));
+  });
+}
+
+$("back2").onclick = () => { show("s2", false); show("s1"); };
+
+$("go2").onclick = async () => {
+  show("e2", false); show("e3", false); show("s2", false); show("s3"); $("prog").innerHTML = "";
+  const log = (m) => { $("prog").insertAdjacentHTML("beforeend", `<div class="prog"><span class="spin"></span>${esc(m)}</div>`); };
+  try {
+    const plan = await apiPlan(log);
+    lastPlan = plan; show("s3", false); renderPlan(plan);
+  } catch (e) { fail("e3", e); $("prog").insertAdjacentHTML("beforeend", `<p><button id="retry">Back to questions</button></p>`); $("retry").onclick = () => { show("s3", false); show("s2"); }; }
+};
+
+/* ---------- results ---------- */
+const money = (p) => (p && typeof p.amount === "number") ? `${p.amount} ${esc(p.currency || "")}${p.per ? " / " + esc(p.per) : ""}` : "price not found";
+const srcLinks = (arr) => (arr && arr.length) ? `<div class="src">` + arr.map((s) => `<a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">${esc((s.title || s.url).slice(0, 60))}</a>`).join("") + `</div>` : "";
+const needChip = (b) => { if (!b) return ""; const n = b.needed || "unknown"; const t = n === "yes" ? "Booking needed" : n === "recommended" ? "Booking recommended" : n === "no" ? "No booking" : "Booking unknown"; return `<span class="chip ${n === "yes" || n === "recommended" ? "need" : ""}">${t}${b.leadTime ? ": " + esc(b.leadTime) + " ahead" : ""}</span>`; };
+
+function renderPlan(p) {
+  const days = (p.days || []).map((d) => `<div class="day"><h3>Day ${esc(d.day)}: ${esc(d.theme)}</h3>` + (d.items || []).map((it) => `
+    <div class="item"><span class="t">${esc(it.time)}</span> <strong>${esc(it.name)}</strong>
+      <div>${esc(it.description)}</div>
+      <div class="chips"><span class="chip">${money(it.price)}${it.price && it.price.basis ? " (" + esc(it.price.basis) + ")" : ""}</span>${needChip(it.booking)}</div>
+      ${it.booking && it.booking.how ? `<div class="small">How: ${esc(it.booking.how)}</div>` : ""}
+      ${it.tip ? `<div class="tip">${esc(it.tip)}</div>` : ""}${srcLinks(it.sources)}</div>`).join("") + `</div>`).join("");
+  const bt = p.bestTime || {};
+  const b = p.budget || {};
+  $("out").innerHTML = `
+  <div class="card"><h2>${esc(p.title || profile.destination)}</h2><p>${esc(p.summary)}</p>
+    <p class="small">Built by: ${esc((p.generatedBy || []).join(" + "))}. ${p.generatedAt ? "Generated " + esc(new Date(p.generatedAt).toLocaleString()) + "." : ""} Check prices and opening times before you book.</p>
+    ${p.agreement ? `<div class="tip"><strong>Where the AIs agreed or differed:</strong> ${esc(p.agreement)}</div>` : ""}</div>
+  <div class="card"><h2>Best time to go</h2><p>${esc(bt.recommendation)}</p>
+    <div class="chips">${bt.peakMonths ? `<span class="chip">Peak: ${esc(bt.peakMonths)}</span>` : ""}${bt.cheapMonths ? `<span class="chip">Cheaper: ${esc(bt.cheapMonths)}</span>` : ""}</div>
+    ${bt.note ? `<p class="small">${esc(bt.note)}</p>` : ""}</div>
+  <div class="card"><h2>Itinerary</h2>${days}</div>
+  <div class="card"><h2>When to book</h2><table>${(p.bookingTimeline || []).map((x) => `<tr><th>${esc(x.when)}</th><td>${esc(x.what)}</td></tr>`).join("") || "<tr><td>Nothing needs booking far ahead.</td></tr>"}</table></div>
+  <div class="card"><h2>Local tips</h2>${(p.localTips || []).map((t) => `<div class="tip">${esc(t.tip)}${srcLinks(t.sources)}</div>`).join("") || "<p class='small'>No tips found.</p>"}
+    <h3>Hidden gems</h3>${(p.hiddenGems || []).map((g) => `<div class="item"><strong>${esc(g.name)}</strong><div>${esc(g.why)}</div>${srcLinks(g.sources)}</div>`).join("") || "<p class='small'>None found.</p>"}</div>
+  <div class="card"><h2>Estimated budget</h2><table>${(b.breakdown || []).map((x) => `<tr><td>${esc(x.label)}</td><td class="n">${esc(x.amount)} ${esc(b.currency)}</td></tr>`).join("")}
+    <tr><th>Per person total</th><th class="n">${esc(b.perPersonTotal)} ${esc(b.currency)}</th></tr></table></div>
+  ${(p.caveats || []).length ? `<div class="card"><h2>Caveats</h2><ul>${p.caveats.map((c) => `<li>${esc(c)}</li>`).join("")}</ul></div>` : ""}
+  ${(p.allSources || []).length ? `<div class="card"><h2>All sources</h2><div class="src">${p.allSources.map((s) => `<div><a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">${esc((s.title || s.url).slice(0, 90))}</a></div>`).join("")}</div></div>` : ""}
+  <p><button id="copy">Copy plan as text</button> <button id="again">Plan another trip</button> <span id="copied" class="small"></span></p>`;
+  show("out");
+  $("again").onclick = () => { show("out", false); show("s1"); window.scrollTo(0, 0); };
+  $("copy").onclick = async () => {
+    const txt = [p.title, p.summary, "", ...(p.days || []).flatMap((d) => [`DAY ${d.day}: ${d.theme}`, ...(d.items || []).map((i) => `${i.time} ${i.name} (${i.price && typeof i.price.amount === "number" ? i.price.amount + " " + i.price.currency : "price n/a"})`), ""])].join("\n");
+    try { await navigator.clipboard.writeText(txt); $("copied").textContent = "Copied."; } catch (e) { $("copied").textContent = "Copy was blocked here."; }
+  };
+  window.scrollTo(0, 0);
+}
+
+/* ---------- startup: pick a backend ---------- */
+(async () => {
+  const badge = $("mode");
+  try {
+    const r = await fetch("/api/status");
+    const j = await r.json();
+    if (r.ok && j.providers && j.providers.length) { MODE = "live"; if (j.needsPassword) show("pwbox"); badge.textContent = "Live web search: " + j.providers.join(" + "); return; }
+    if (r.ok) { badge.textContent = "Server has no API key"; badge.classList.add("warn"); return; }
+  } catch (e) { /* not served by our server */ }
+  try {
+    if (window.claude && window.claude.use) {
+      sample = await window.claude.use("sample");
+      if (sample) { MODE = "demo"; badge.textContent = "Demo: AI only, no live web"; badge.classList.add("warn"); return; }
+    }
+  } catch (e) { /* ignore */ }
+  badge.textContent = "No AI backend"; badge.classList.add("warn");
+})();
+</script>
+</body>
+</html>
