@@ -259,8 +259,8 @@ const server = http.createServer(async (req, res) => {
     }
     // static files
     const file = req.url === "/" ? "index.html" : req.url.split("?")[0].replace(/\.\./g, "");
-    const fp = path.join(__dirname, "public", file);
-    if (fs.existsSync(fp) && fs.statSync(fp).isFile()) {
+    const fp = [path.join(__dirname, "public", file), path.join(__dirname, file)].find((f) => f.endsWith(".html") && fs.existsSync(f) && fs.statSync(f).isFile());
+    if (fp) {
       const type = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" }[path.extname(fp)] || "text/plain";
       res.writeHead(200, { "content-type": type + "; charset=utf-8" });
       return res.end(fs.readFileSync(fp));
