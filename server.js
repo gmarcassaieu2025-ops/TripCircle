@@ -55,14 +55,28 @@ if (ANTHROPIC_KEY) {
 }
 
 if (GEMINI_KEY) {
-  const call = async (body) => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const GEMINI_FALLBACK = process.env.GEMINI_FALLBACK || "gemini-3.6-flash";
+  const callModel = async (model, body) => {
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": GEMINI_KEY }, body: JSON.stringify(body) }
     );
     const j = await r.json();
-    if (!r.ok) throw new Error("Gemini: " + (j.error && j.error.message || r.status));
+    if (!r.ok) { const e = new Error("Gemini: " + (j.error && j.error.message || r.status)); e.retry = [429, 500, 502, 503, 504].includes(r.status); throw e; }
     return j;
+  };
+  // Retries when Google says the model is busy, then switches to a fallback model.
+  const call = async (body) => {
+    const models = GEMINI_FALLBACK && GEMINI_FALLBACK !== GEMINI_MODEL ? [GEMINI_MODEL, GEMINI_FALLBACK] : [GEMINI_MODEL];
+    let lastErr;
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try { return await callModel(model, body); }
+        catch (e) { lastErr = e; if (!e.retry) throw e; await sleep(1000 * (attempt + 1)); }
+      }
+    }
+    throw lastErr;
   };
   const textOf = (j) => ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map((p) => p.text || "").join("");
   providers.gemini = {
@@ -259,8 +273,9 @@ const server = http.createServer(async (req, res) => {
     }
     // static files
     const file = req.url === "/" ? "index.html" : req.url.split("?")[0].replace(/\.\./g, "");
-    const fp = path.join(__dirname, "public", file);
-    if (fs.existsSync(fp) && fs.statSync(fp).isFile()) {
+    // Look in ./public first, then next to server.js (works if the folder was flattened on upload).
+    const fp = [path.join(__dirname, "public", file), path.join(__dirname, file)].find((f) => f.endsWith(".html") && fs.existsSync(f) && fs.statSync(f).isFile());
+    if (fp) {
       const type = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" }[path.extname(fp)] || "text/plain";
       res.writeHead(200, { "content-type": type + "; charset=utf-8" });
       return res.end(fs.readFileSync(fp));
